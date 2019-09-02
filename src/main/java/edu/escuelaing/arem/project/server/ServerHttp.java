@@ -57,7 +57,9 @@ public class ServerHttp extends ServerConnection {
                 fileExtension = FileReader.getFileExtension(requestPath);
             }
 
-            out.println(getHTTPHeader(fileExtension));
+            String httpHeader = getHTTPHeader(fileExtension);
+            System.out.println("Send headers: " + httpHeader + "\nBody: " + new String(content));
+            out.print(httpHeader);
             outputSteam.write(content);
             outputSteam.flush();
 
@@ -83,18 +85,16 @@ public class ServerHttp extends ServerConnection {
     }
 
     private String getErrorResponse() {
-        return "HTTP/1.1 404\n"
-                + "Server: Super Server AREP\n"
-                + "Status: 404\n"
-                + '\n'
-                + "Not fount 404";
+        return "HTTP/1.1 404\r\n"
+                + "\r\n"
+                + "Not found 404\n";
     }
 
     private String getHTTPHeader(String fileExtension) {
-        return "HTTP/1.1 200 OK\n"
+        return "HTTP/1.1 200 OK\r\n"
                 + "Content-Type: " + supportedContent.getOrDefault(fileExtension, "text/html;charset=UTF-8")
-                + "\nServer: Super Server AREP\n"
-                + "Status: 200\n";
+                + "\r\n"
+                + "\r\n";
     }
 
     private Map<String, String> getHeaders() throws IOException {
