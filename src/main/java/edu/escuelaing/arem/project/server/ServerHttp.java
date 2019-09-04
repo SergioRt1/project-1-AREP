@@ -59,7 +59,8 @@ public class ServerHttp extends ServerConnection {
 
             String httpHeader = getHTTPHeader(fileExtension);
             System.out.println("Send headers: " + httpHeader + "\nBody: " + new String(content));
-            out.print(httpHeader);
+            out.write(httpHeader);
+            out.println("\r");
             outputSteam.write(content);
             outputSteam.flush();
 
@@ -93,7 +94,6 @@ public class ServerHttp extends ServerConnection {
     private String getHTTPHeader(String fileExtension) {
         return "HTTP/1.1 200 OK\r\n"
                 + "Content-Type: " + supportedContent.getOrDefault(fileExtension, "text/html;charset=UTF-8")
-                + "\r\n"
                 + "\r\n";
     }
 
