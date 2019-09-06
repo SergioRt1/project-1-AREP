@@ -1,7 +1,11 @@
 package edu.escuelaing.arem.project.server;
 
 import edu.escuelaing.arem.project.utils.FileReader;
+import edu.escuelaing.arem.project.utils.JsonUtil;
 import edu.escuelaing.arem.project.web_components.URLMapper;
+import edu.escuelaing.arem.project.web_components.URLProcessor;
+import edu.escuelaing.arem.project.web_components.entities.HandlerModel;
+import edu.escuelaing.arem.project.web_components.entities.ProcessedURL;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -49,16 +53,17 @@ public class ServerHttp extends ServerConnection {
         try {
             byte[] content;
             String fileExtension;
-            if (urlMapper.getURLMap().containsKey(requestPath)) {
-                content = getWebComponentContent(requestPath);
+            ProcessedURL processedURL = URLProcessor.processURL(requestPath);
+
+            if (urlMapper.getURLMap().containsKey(processedURL.getPath())) {
+                content = getWebComponentContent(processedURL);
                 fileExtension = "html";
             } else {
-                content = getFileContent(requestPath);
-                fileExtension = FileReader.getFileExtension(requestPath);
+                content = getFileContent(processedURL.getPath());
+                fileExtension = FileReader.getFileExtension(processedURL.getPath());
             }
 
             String httpHeader = getHTTPHeader(fileExtension);
-            System.out.println("Send headers: " + httpHeader + "\nBody: " + new String(content));
             out.write(httpHeader);
             out.println("\r");
             outputSteam.write(content);
@@ -73,10 +78,37 @@ public class ServerHttp extends ServerConnection {
         }
     }
 
-    private byte[] getWebComponentContent(String requestPath) throws ReflectiveOperationException {
-        System.out.println("Request handled to: " + requestPath);
+    private byte[] getWebComponentContent(ProcessedURL processedURL) throws ReflectiveOperationException {
+        System.out.println("Request handled to: " + processedURL.getPath());
+        HandlerModel handler = urlMapper.getHandler(processedURL.getPath());
+        Map<String, String> urlParameters = processedURL.getParameters();
+        boolean haveParams = false;
+        int numberOfParams = handler.getParameterTypes().size();
+        Object[] params = new Object[numberOfParams];
+        int index = 0;
 
-        return urlMapper.getHandler(requestPath).process().toString().getBytes();
+        for (String parameterId : urlParameters.keySet()) {
+            if (handler.getParameterTypes().containsKey(parameterId)) {
+                String json = urlParameters.get(parameterId);
+                Object param = JsonUtil.fromJson(json, handler.getParameterTypes().get(parameterId));
+                params[index++] = param;
+                haveParams = true;
+            }
+        }
+        Object object;
+        if (haveParams) {
+            object = handler.getHandler().process(null, params);
+        } else {
+            object = handler.getHandler().process(null, null);
+        }
+        String response;
+        if (object instanceof String) {
+            response = (String) object;
+        } else {
+            response = JsonUtil.toJson(object);
+        }
+
+        return response.getBytes();
     }
 
     private byte[] getFileContent(String requestPath) throws IOException {
@@ -84,6 +116,7 @@ public class ServerHttp extends ServerConnection {
 
         return FileReader.getBytesOfFile(requestPath);
     }
+
 
     private String getErrorResponse() {
         return "HTTP/1.1 404\r\n"

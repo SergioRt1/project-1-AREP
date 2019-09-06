@@ -1,6 +1,7 @@
 package edu.escuelaing.arem.project.apps;
 
 import edu.escuelaing.arem.project.utils.FileReader;
+import edu.escuelaing.arem.project.web_components.Param;
 import edu.escuelaing.arem.project.web_components.Web;
 
 import java.io.IOException;
@@ -54,5 +55,10 @@ public class WebServiceHello {
     @Web("user")
     public static User user() {
         return new User(12345L, "name");
+    }
+
+    @Web("sum")
+    public static Operation<Integer, Float, Float> sumQueryParam(@Param("num1") Integer num1, @Param("num2") Float num2) {
+        return new Operation<>(num1, num2,num1 + num2);
     }
 }

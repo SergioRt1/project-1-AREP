@@ -1,7 +1,8 @@
 package edu.escuelaing.arem.project.web_components;
 
+import edu.escuelaing.arem.project.web_components.entities.HandlerModel;
 import org.reflections.Reflections;
-import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.MethodAnnotationsScanner;
 import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
@@ -14,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class URLMapper {
-    private final Map<String, URLHandler> URLMap;
+    private final Map<String, HandlerModel> URLMap;
 
     public URLMapper() {
         this.URLMap = new HashMap<>();
@@ -24,42 +25,36 @@ public class URLMapper {
         List<Method> methods = getWebMethods();
         for (Method method : methods) {
             String URL = "/apps/" + method.getAnnotation(Web.class).value();
-            Parameter[] parameters = method.getParameters();
-//            URLHandler handler;
-//            if (parameters.length != 0 && String.class.isAssignableFrom(parameters[0].getType())) {
-//                handler = () -> method.invoke("");
-//            } else {
-//                handler = () -> method.invoke(null);
-//            }
-            URLMap.put(URL, () -> method.invoke(null));
+
+            Map<String, Class<?>> parameterTypes = new HashMap<>();
+            for (Parameter parameter : method.getParameters()) {
+                if (parameter.getAnnotation(Param.class) != null) {
+                    String id = parameter.getAnnotation(Param.class).value();
+                    parameterTypes.put(id, parameter.getType());
+                }
+            }
+            HandlerModel handler = new HandlerModel(method::invoke, parameterTypes);
+
+            URLMap.put(URL, handler);
             System.out.printf("Mapped[%s]\n", URL);
         }
     }
 
-    public URLHandler getHandler(String url) {
+    public HandlerModel getHandler(String url) {
         return URLMap.get(url);
     }
 
-    public Map<String, URLHandler> getURLMap() {
+    public Map<String, HandlerModel> getURLMap() {
         return URLMap;
     }
 
     private List<Method> getWebMethods() {
-        List<Method> methods = new ArrayList<>();
         Reflections reflections = new Reflections(new ConfigurationBuilder()
                 .setUrls(ClasspathHelper.forPackage("edu.escuelaing.arem.project"))
-                .setScanners(new SubTypesScanner(false))
+                .setScanners(new MethodAnnotationsScanner())
         );
-        Set<Class<?>> allClasses = reflections.getSubTypesOf(Object.class);
+        Set<Method> methods = reflections.getMethodsAnnotatedWith(Web.class);
 
-        for (Class loadedClass : allClasses) {
-            for (Method method : loadedClass.getMethods()) {
-                if (method.isAnnotationPresent(Web.class)) {
-                    methods.add(method);
-                }
-            }
-        }
-
-        return methods;
+        return new ArrayList<>(methods);
     }
 }
