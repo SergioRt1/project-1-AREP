@@ -59,6 +59,26 @@ public class WebServiceHello {
 
     @Web("sum")
     public static Operation<Integer, Float, Float> sumQueryParam(@Param("num1") Integer num1, @Param("num2") Float num2) {
-        return new Operation<>(num1, num2,num1 + num2);
+        return new Operation<>(num1, num2, num1 + num2);
+    }
+
+    @Web("form")
+    public static String form() throws IOException {
+        return "<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <title>Super page with from from web server</title>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "<h1>Form</h1>\n" +
+                "<form action=\"sum\">" +
+                "num1: <br>" +
+                "<input type=\"text\" name=\"num1\"><br>\n" +
+                "num2: <br>" +
+                "<input type=\"text\" name=\"num2\"><br>\n" +
+                "<input type=\"submit\">" +
+                "</body>\n" +
+                "</html>";
     }
 }
