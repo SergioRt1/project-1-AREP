@@ -40,14 +40,6 @@ public class URLMapper {
         }
     }
 
-    public HandlerModel getHandler(String url) {
-        return URLMap.get(url);
-    }
-
-    public Map<String, HandlerModel> getURLMap() {
-        return URLMap;
-    }
-
     private List<Method> getWebMethods() {
         Reflections reflections = new Reflections(new ConfigurationBuilder()
                 .setUrls(ClasspathHelper.forPackage("edu.escuelaing.arem.project"))
@@ -56,5 +48,13 @@ public class URLMapper {
         Set<Method> methods = reflections.getMethodsAnnotatedWith(Web.class);
 
         return new ArrayList<>(methods);
+    }
+
+    public HandlerModel getHandler(String url) {
+        return URLMap.get(url);
+    }
+
+    public Map<String, HandlerModel> getURLMap() {
+        return URLMap;
     }
 }

@@ -8,9 +8,9 @@ class ServerService {
     private final ServerConnection serverConnection;
     private final URLMapper urlMapper;
 
-    ServerService(int port) {
+    ServerService(int port, int nThreads) {
         this.urlMapper = new URLMapper();
-        this.serverConnection = new ServerHttp(port, urlMapper);
+        this.serverConnection = new ServerHttp(port, urlMapper, nThreads);
     }
 
     void initialize() {

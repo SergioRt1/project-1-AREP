@@ -7,7 +7,7 @@ public class ServerController {
 
     public static void main(String[] args) {
         int port = getPort();
-        ServerService serverService = new ServerService(port);
+        ServerService serverService = new ServerService(port, 80);
         serverService.initialize();
         serverService.listen();
     }

@@ -7,7 +7,12 @@ import edu.escuelaing.arem.project.web_components.URLProcessor;
 import edu.escuelaing.arem.project.web_components.entities.HandlerModel;
 import edu.escuelaing.arem.project.web_components.entities.ProcessedURL;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,8 +20,8 @@ public class ServerHttp extends ServerConnection {
     private final Map<String, String> supportedContent;
     private final URLMapper urlMapper;
 
-    public ServerHttp(int port, URLMapper urlMapper) {
-        super(port, true);
+    public ServerHttp(int port, URLMapper urlMapper, int nThreads) {
+        super(port, true, nThreads);
         this.urlMapper = urlMapper;
         supportedContent = new HashMap<String, String>() {{
             put("html", "text/html");
@@ -36,20 +41,30 @@ public class ServerHttp extends ServerConnection {
     }
 
     @Override
-    protected void processInput() throws IOException {
-        String[] request;
-        String inputLine;
-        if ((inputLine = in.readLine()) != null && !inputLine.isEmpty()) {
-            request = inputLine.split(" ");
-        } else return;
-        String requestPath = request[1];
-        System.out.println("Request received to: " + requestPath);
-        Map<String, String> headers = getHeaders();
+    protected void processInput(Socket clientSocket) {
+        try {
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            String[] request;
+            String inputLine;
+            if ((inputLine = in.readLine()) != null && !inputLine.isEmpty()) {
+                request = inputLine.split(" ");
+            } else return;
 
-        sendResponse(requestPath);
+            String requestPath = request[1];
+            System.out.println("Request received to: " + requestPath);
+            Map<String, String> headers = getHeaders(in);
+
+            sendResponse(requestPath, clientSocket);
+        } catch (IOException ex) {
+            System.err.println("Error processing request: " + ex.getMessage());
+        } finally {
+            closeClientConnection(clientSocket);
+        }
     }
 
-    private void sendResponse(String requestPath) {
+    private void sendResponse(String requestPath, Socket clientSocket) throws IOException {
+        OutputStream outputStream = clientSocket.getOutputStream();
+        PrintWriter out = new PrintWriter(outputStream, true);
         try {
             byte[] content;
             String fileExtension;
@@ -66,8 +81,8 @@ public class ServerHttp extends ServerConnection {
             String httpHeader = getHTTPHeader(fileExtension);
             out.write(httpHeader);
             out.println("\r");
-            outputSteam.write(content);
-            outputSteam.flush();
+            outputStream.write(content);
+            outputStream.flush();
 
             System.out.println("  200 Ok");
         } catch (Exception e) {
@@ -117,7 +132,6 @@ public class ServerHttp extends ServerConnection {
         return FileReader.getBytesOfFile(requestPath);
     }
 
-
     private String getErrorResponse() {
         return "HTTP/1.1 404\r\n"
                 + "\r\n"
@@ -130,7 +144,7 @@ public class ServerHttp extends ServerConnection {
                 + "\r\n";
     }
 
-    private Map<String, String> getHeaders() throws IOException {
+    private Map<String, String> getHeaders(BufferedReader in) throws IOException {
         String inputLine;
         Map<String, String> headers = new HashMap<>();
         while (in.ready() && (inputLine = in.readLine()) != null && !inputLine.isEmpty()) {
@@ -158,5 +172,14 @@ public class ServerHttp extends ServerConnection {
         }
 
         headers.put(key.toString().toLowerCase(), value.toString().toLowerCase());
+    }
+
+    private void closeClientConnection(Socket clientSocket) {
+        try {
+            System.out.println("Closing connection with client.");
+            clientSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
